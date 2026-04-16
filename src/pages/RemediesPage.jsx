@@ -176,6 +176,15 @@ export default function RemediesPage() {
             transform: translateY(-5px);
             border-color: var(--primary);
         }
+
+        @media (max-width: 640px) {
+           .container { padding: 0 !important; }
+           h1 { font-size: 1.75rem !important; }
+           p { font-size: 0.9375rem !important; }
+           form { flex-direction: column !important; padding: 0.5rem !important; border-radius: 1rem !important; }
+           form button { width: 100%; padding: 0.875rem !important; border-radius: 0.75rem !important; }
+           .remedy-card { padding: 1.25rem !important; }
+        }
       `}</style>
     </div>
   )

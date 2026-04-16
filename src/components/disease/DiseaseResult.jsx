@@ -145,6 +145,7 @@ export default function DiseaseResult({ data }) {
         .doctor-report {
           font-family: 'Inter', sans-serif;
           color: var(--text-main);
+          padding: 0 0.5rem;
         }
         
         .section-header {
@@ -194,6 +195,10 @@ export default function DiseaseResult({ data }) {
 
         @media (max-width: 600px) {
            .grid-stack { grid-template-columns: 1fr !important; }
+           .report-card { padding: 1rem !important; }
+           .section-header { margin-bottom: 1rem !important; }
+           h1 { font-size: 1.25rem !important; }
+           .section-title { font-size: 0.875rem !important; }
         }
       `}</style>
     </div>

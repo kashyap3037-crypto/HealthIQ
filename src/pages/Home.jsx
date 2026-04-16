@@ -139,16 +139,20 @@ export default function Home() {
         }
 
         @media (max-width: 640px) {
-          header h1 { font-size: 2.25rem; }
+          header h1 { font-size: 1.85rem !important; margin-top: 1rem; }
+          header p { font-size: 1rem !important; margin-bottom: 2rem !important; }
           .search-box {
             flex-direction: column !important;
-            padding: 0.75rem !important;
-            border-radius: 1.5rem !important;
+            padding: 0.5rem !important;
+            border-radius: 1rem !important;
+            gap: 0.25rem !important;
           }
           .search-btn {
              width: 100%;
-             padding: 1rem !important;
+             padding: 0.875rem !important;
+             border-radius: 0.75rem !important;
           }
+          .chip { padding: 0.4rem 0.8rem !important; font-size: 0.75rem !important; }
         }
       `}</style>
     </div>
