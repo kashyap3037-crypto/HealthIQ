@@ -98,8 +98,12 @@ export default function RemediesPage() {
         {loading && <LoadingSpinner />}
 
         {error && (
-            <div style={{ textAlign: 'center', color: '#dc2626', padding: '2rem', background: '#fef2f2', borderRadius: '1rem', border: '1px solid #fee2e2' }}>
-                {error}
+            <div style={{ 
+              textAlign: 'center', color: '#991b1b', padding: '1.5rem', 
+              background: '#fef2f2', borderRadius: '1rem', border: '1px solid #fee2e2',
+              marginBottom: '2rem', fontSize: '0.875rem', fontWeight: 500
+            }}>
+                ⚠️ {error}
             </div>
         )}
 
