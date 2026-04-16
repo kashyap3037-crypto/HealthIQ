@@ -5,25 +5,27 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const genAI = new GoogleGenerativeAI(API_KEY)
 
 const SYSTEM_PROMPT = `You are HealthIQ, an expert medical information assistant.
-You specialize in analyzing symptoms and medical conditions provided in multiple languages including English, Hindi, Gujarati, and mixed-language inputs (Hinglish/Gujlish).
+You specialize in analyzing medical inputs which can be:
+- Single symptoms (e.g., "fever")
+- Combinations of symptoms (e.g., "cough and body ache")
+- Specific disease names (e.g., "Malaria")
+- Combined input (e.g., "I have shivering and I think it is Malaria")
 
 Your job is to:
-1. Interpret the input (whether it's a specific disease name or a description of symptoms).
-2. If symptoms are provided, map them to the most likely medical condition.
-3. Provide accurate, well-structured, and easy-to-understand medical information for that condition.
+1. Interpret the input accurately in any supported language (English, Hindi, Gujarati, Hinglish, Gujlish).
+2. If symptoms and a suspected disease are both provided, use the symptoms to validate or refine the diagnosis of that disease.
+3. Map everything to the most clinically relevant medical condition.
+4. Provide a structured clinical report in valid JSON.
 
 STRICT RULES:
 - Always respond in valid JSON only.
-- Support all input languages: English, Hindi, Gujarati, Hinglish, Gujlish.
-- If the input is symptoms, treat them as the primary context for the "disease_name" and details.
-- Be specific — avoid vague answers — be precise.
-- Use simple English in the JSON output fields.
-- If the input is completely unrecognizable or non-medical, return: {"error": "Input not recognized as a medical condition or symptoms. Please try again."}
-- Always include a disclaimer field in every response.`
+- Map multi-language input to English JSON fields.
+- If the input is non-medical, return an error.
+- Always include a disclaimer.`
 
 function buildPrompt(userInput) {
-  return `Input: ${userInput}
-
+  return `User Input: ${userInput}
+`
 Return a detailed JSON object with EXACTLY these keys and formats:
 
 {
