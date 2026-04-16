@@ -61,7 +61,7 @@ export default function Home() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search condition e.g. Hypertension, Malaria..."
+              placeholder="Enter symptoms or condition (English, Hindi, Gujarati, etc.)"
               style={{
                 flex: 1, background: 'transparent', border: 'none',
                 padding: '0.75rem 0.5rem', color: 'var(--text-main)', fontSize: '1.125rem', outline: 'none'
