@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route } from 'react-router-dom'
+import Navbar from './components/common/Navbar.jsx'
 import Home from './pages/Home.jsx'
 import ResultPage from './pages/ResultPage.jsx'
 import RemediesPage from './pages/RemediesPage.jsx'
@@ -30,51 +31,17 @@ export default function App() {
           .fade-in { animation: fadeUp 0.4s ease forwards; }
         `}</style>
 
-        {/* ── Minimalist Branding & Nav ── */}
-        <div style={{ position: 'absolute', top: '2rem', left: '2rem', zIndex: 100, display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '1.75rem', height: '1.75rem', borderRadius: '0.5rem',
-              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1rem'
-            }}>🩺</div>
-            <span style={{ fontWeight: 800, fontSize: '1.125rem', letterSpacing: '-0.02em' }}>
-              Health<span style={{ color: 'var(--primary)' }}>IQ</span>
-            </span>
-          </Link>
-
-          <Link to="/remedies" style={{ 
-            textDecoration: 'none', color: 'var(--text-muted)', fontSize: '0.8125rem', 
-            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em'
-          }}>
-            Remedies
-          </Link>
-        </div>
-
-        {/* ── Dark Mode Toggle ── */}
-        <button 
-          onClick={toggleTheme}
-          style={{
-            position: 'absolute', top: '1.75rem', right: '2rem', zIndex: 100,
-            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-            borderRadius: '0.75rem', width: '2.5rem', height: '2.5rem', fontSize: '1.125rem',
-            color: 'var(--text-main)', boxShadow: 'var(--shadow-sm)'
-          }}
-          title="Toggle Dark Mode"
-        >
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button>
+        <Navbar theme={theme} toggleTheme={toggleTheme} />
 
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/disease/:name" element={<ResultPage />} />
           <Route path="/remedies" element={<RemediesPage />} />
-          {/* Fallback for safety */}
           <Route path="*" element={<Home />} />
         </Routes>
 
       </div>
     </Router>
   )
+}
 }
