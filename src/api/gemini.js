@@ -74,17 +74,14 @@ export async function fetchDiseaseInfo(disease) {
   const PRIMARY_MODEL = 'gemini-3-flash-preview'
   const FALLBACK_MODEL = 'gemini-2.0-flash'
 
-  // 1. Check API key
   if (!API_KEY || API_KEY === 'your_gemini_api_key_here') throw new Error('API_KEY_MISSING')
 
-  // 2. Local Storage Cache
   const cacheKey = `mg_${disease.toLowerCase().trim()}`
   try {
     const cached = localStorage.getItem(cacheKey)
     if (cached) return JSON.parse(cached)
   } catch {}
 
-  // 3. API Call Function
   const callAI = async (modelName) => {
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -93,49 +90,32 @@ export async function fetchDiseaseInfo(disease) {
         temperature: 0.2, 
         topP: 0.8, 
         maxOutputTokens: 3000,
-        responseMimeType: "application/json" // Force JSON mode
+        responseMimeType: "application/json"
       },
     })
     const result = await model.generateContent(buildPrompt(disease))
     const response = await result.response
     let text = response.text()
 
-    if (!text || text.trim().length === 0) {
-      throw new Error('NO_RESPONSE')
-    }
-
-    // Robust JSON extraction
-    try {
-      // Find the first { and the last }
-      const start = text.indexOf('{')
-      const end = text.lastIndexOf('}')
-      if (start === -1 || end === -1) throw new Error('NO_JSON_FOUND')
-      
-      const jsonStr = text.substring(start, end + 1)
-      return JSON.parse(jsonStr)
-    } catch (e) {
-      console.error('JSON Parse Error. Raw text:', text)
-      throw new Error('PARSE_ERROR')
-    }
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('NO_JSON_FOUND')
+    return JSON.parse(text.substring(start, end + 1))
   }
 
-  // 4. Try-Catch with Fallback
   try {
-    // Attempt with Primary Model
     const parsed = await callAI(PRIMARY_MODEL)
     if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
     return parsed
   } catch (err) {
     const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
-    
     if (isOverloaded) {
-      console.warn(`Primary model (${PRIMARY_MODEL}) overloaded. Attempting fallback to ${FALLBACK_MODEL}...`)
       try {
         const fallbackParsed = await callAI(FALLBACK_MODEL)
         if (!fallbackParsed.error) localStorage.setItem(cacheKey, JSON.stringify(fallbackParsed))
         return fallbackParsed
       } catch (fallbackErr) {
-        throw new Error('SYSTEM_OVERLOADED') // Both models failing
+        throw new Error('SYSTEM_OVERLOADED')
       }
     }
     if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
@@ -145,34 +125,43 @@ export async function fetchDiseaseInfo(disease) {
 }
 
 export async function fetchHomeRemedies(query) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const PRIMARY = 'gemini-3-flash-preview'
+  const FALLBACK = 'gemini-2.0-flash'
   
-  const prompt = `You are a home remedy expert. Provide a list of exactly 6-7 natural home remedies for the following input: "${query}".
-  
-  The input can be a specific disease name or a description of symptoms (e.g., "stomach pain", "bukhar", "khansi or headache").
-  The query may be in English, Hindi, Gujarati, Hinglish, or Gujlish. 
-  
-  Return valid JSON only in this format:
+  const prompt = `You are a home remedy expert. Provide exactly 6-7 natural home remedies for: "${query}".
+  Target symptoms or disease in English, Hindi, Gujarati, Hinglish, or Gujlish.
+  Output in valid JSON:
   {
-    "condition": "The interpreted disease or symptom",
+    "condition": "The interpreted condition",
     "remedies": [
-      { "name": "Remedy name", "use": "Detailed but simple instructions in English", "benefit": "Brief benefit" }
+      { "name": "Remedy Name", "use": "Detailed but simple instructions in English", "benefit": "Brief benefit" }
     ]
   }
-  
-  Keep the language simple. Return ONLY JSON.`
+  Use simple English. No markdown.`
 
-  try {
+  const callRemedyAI = async (modelName) => {
+    const model = genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: { responseMimeType: "application/json" }
+    })
     const result = await model.generateContent(prompt)
-    const response = await result.response
-    let text = response.text()
+    const text = (await result.response).text()
     
     const start = text.indexOf('{')
     const end = text.lastIndexOf('}')
-    if (start === -1 || end === -1) throw new Error("No JSON found")
+    if (start === -1) throw new Error("NO_JSON")
     return JSON.parse(text.substring(start, end + 1))
-  } catch (e) {
-    console.error('Remedies Fetch Error:', e)
-    return { error: "Failed to fetch remedies. Please try again." }
+  }
+
+  try {
+    return await callRemedyAI(PRIMARY)
+  } catch (err) {
+    console.error('Home Remedies Error (Primary):', err)
+    try {
+      return await callRemedyAI(FALLBACK)
+    } catch (fallbackErr) {
+      console.error('Home Remedies Error (Fallback):', fallbackErr)
+      return { error: "Our remedies search is currently busy. Please wait 30 seconds and try again." }
+    }
   }
 }
