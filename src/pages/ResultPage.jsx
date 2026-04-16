@@ -43,19 +43,19 @@ export default function ResultPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-main)', overflowX: 'hidden' }}>
       
       {/* ── Main content ── */}
-      <main className="container" style={{ padding: '2rem 1.5rem 6rem' }}>
+      <main className="container" style={{ padding: '6rem 1.5rem 6rem' }}>
 
         {/* Action Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', gap: '1rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => navigate(-1)}
             style={{
-              background: 'var(--white)', color: 'var(--primary)', border: '1px solid var(--border-color)',
-              borderRadius: '0.5rem', padding: '0.625rem 1rem', fontSize: '0.875rem', fontWeight: 600,
+              background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)',
+              borderRadius: '0.75rem', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600,
               boxShadow: 'var(--shadow-sm)', minHeight: 'auto'
             }}
           >
-            ← Back to Search
+            ← Back
           </button>
           
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -63,33 +63,33 @@ export default function ResultPage() {
               <button
                 onClick={handleDownload}
                 style={{
-                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff', 
-                  border: 'none', borderRadius: '0.5rem', padding: '0.625rem 1.25rem', fontSize: '0.875rem', 
-                  fontWeight: 600, boxShadow: 'var(--shadow-md)', minHeight: 'auto'
+                  background: 'var(--primary)', color: '#fff', 
+                  border: 'none', borderRadius: '0.75rem', padding: '0.625rem 1.5rem', fontSize: '0.875rem', 
+                  fontWeight: 700, boxShadow: 'var(--shadow-md)', minHeight: 'auto'
                 }}
               >
-                📊 Download Report
+                📊 Save PDF
               </button>
             )}
           </div>
         </div>
 
         {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '6rem 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '4rem 0' }}>
             <LoadingSpinner />
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Consulting HealthIQ database...</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', letterSpacing: '0.05em' }}>PREPARING CLINICAL DATA...</p>
           </div>
         )}
 
         {!loading && error && (
-          <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center' }}>
+          <div style={{ maxWidth: '600px', margin: '2rem auto', textAlign: 'center' }}>
             <ErrorBanner message={error} />
             <button
               onClick={() => navigate('/')}
               style={{ 
                 background: 'var(--primary)', color: 'white', border: 'none', 
-                borderRadius: '0.5rem', padding: '0.75rem 1.5rem', marginTop: '1.5rem',
-                fontWeight: 600
+                borderRadius: '0.75rem', padding: '0.75rem 2rem', marginTop: '2.5rem',
+                fontWeight: 700, boxShadow: 'var(--shadow-md)'
               }}
             >
               Return Home
@@ -106,7 +106,7 @@ export default function ResultPage() {
 
       <style>{`
         @media (max-width: 480px) {
-          .container { padding: 0 1rem; }
+          .container { padding: 4rem 1rem 4rem; }
         }
       `}</style>
     </div>

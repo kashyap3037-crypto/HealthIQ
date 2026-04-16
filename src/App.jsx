@@ -1,11 +1,27 @@
+import { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home.jsx'
 import ResultPage from './pages/ResultPage.jsx'
 
 export default function App() {
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
+
   return (
     <Router>
-      <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', position: 'relative' }}>
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'var(--bg-main)', 
+        color: 'var(--text-main)', 
+        position: 'relative',
+        transition: 'background 0.3s, color 0.3s'
+      }}>
         
         <style>{`
           @keyframes spin    { to { transform: rotate(360deg); } }
@@ -13,7 +29,7 @@ export default function App() {
           .fade-in { animation: fadeUp 0.4s ease forwards; }
         `}</style>
 
-        {/* ── Minimalist Branding in Corner ── */}
+        {/* ── Minimalist Branding ── */}
         <div style={{ position: 'absolute', top: '2rem', left: '2rem', zIndex: 100 }}>
           <Link to="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{
@@ -27,6 +43,20 @@ export default function App() {
             </span>
           </Link>
         </div>
+
+        {/* ── Dark Mode Toggle ── */}
+        <button 
+          onClick={toggleTheme}
+          style={{
+            position: 'absolute', top: '1.75rem', right: '2rem', zIndex: 100,
+            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+            borderRadius: '0.75rem', width: '2.5rem', height: '2.5rem', fontSize: '1.125rem',
+            color: 'var(--text-main)', boxShadow: 'var(--shadow-sm)'
+          }}
+          title="Toggle Dark Mode"
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
 
         <Routes>
           <Route path="/" element={<Home />} />

@@ -46,7 +46,7 @@ export default function Home() {
           {/* ── Search Bar ── */}
           <div className="search-box" style={{
             maxWidth: '720px', margin: '0 auto',
-            background: 'var(--white)',
+            background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
             borderRadius: '1.5rem',
             padding: '0.75rem',
@@ -88,7 +88,7 @@ export default function Home() {
                 key={s}
                 onClick={() => handleSearch(s)}
                 style={{
-                  background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   borderRadius: '1rem', padding: '0.5rem 1.25rem', fontSize: '0.875rem',
                   color: 'var(--text-muted)', backdropFilter: 'blur(4px)'
                 }}
@@ -112,7 +112,7 @@ export default function Home() {
             { tag: '🛡️', title: 'Safe & Private', desc: 'Built with privacy-first principles and responsible AI practices.' }
           ].map((f, i) => (
             <div key={i} style={{
-              padding: '2.5rem', background: 'var(--white)', border: '1px solid var(--border-color)',
+              padding: '2.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)',
               borderRadius: '2rem', transition: 'all 0.4s', boxShadow: 'var(--shadow-sm)'
             }} className="feature-card">
               <div style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>{f.tag}</div>
