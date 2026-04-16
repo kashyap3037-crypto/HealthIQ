@@ -138,21 +138,6 @@ export default function Home() {
 
       </main>
 
-      <footer style={{
-        padding: '5rem 0', background: 'var(--white)', borderTop: '1px solid var(--border-color)',
-        textAlign: 'center'
-      }}>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.5rem', opacity: 0.6 }}>
-            <span style={{ fontWeight: 800 }}>Health<span style={{ color: 'var(--primary)' }}>IQ</span></span>
-            <span style={{ color: 'var(--border-color)' }}>|</span>
-            <span style={{ fontSize: '0.8125rem' }}>Next-Gen Health AI</span>
-          </div>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-            © {new Date().getFullYear()} HealthIQ. This tool is for informational purposes only.
-          </p>
-        </div>
-      </footer>
 
       <style>{`
         .search-box:focus-within {

@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
+import Footer from './components/common/Footer.jsx'
 import Home from './pages/Home.jsx'
 import ResultPage from './pages/ResultPage.jsx'
 
@@ -19,6 +20,8 @@ export default function App() {
           {/* Fallback for safety */}
           <Route path="*" element={<Home />} />
         </Routes>
+
+        <Footer />
 
       </div>
     </Router>
