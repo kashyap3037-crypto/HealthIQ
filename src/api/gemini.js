@@ -138,9 +138,39 @@ export async function fetchDiseaseInfo(disease) {
         throw new Error('SYSTEM_OVERLOADED') // Both models failing
       }
     }
-
     if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
     if (err.message?.includes('429')) throw new Error('RATE_LIMIT')
     throw new Error(err.message || 'API_ERROR')
+  }
+}
+
+export async function fetchHomeRemedies(query) {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  
+  const prompt = `You are a home remedy expert. Provide a list of exactly 6-7 natural home remedies for: "${query}".
+  The query may be in English, Hindi, Gujarati, Hinglish, or Gujlish. 
+  
+  Return valid JSON only in this format:
+  {
+    "query": "The interpreted condition",
+    "remedies": [
+      { "name": "Remedy name", "use": "Detailed but simple instructions in English", "benefit": "Brief benefit" }
+    ]
+  }
+  
+  Keep the language simple. Return ONLY JSON.`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    let text = response.text()
+    
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error("No JSON found")
+    return JSON.parse(text.substring(start, end + 1))
+  } catch (e) {
+    console.error('Remedies Fetch Error:', e)
+    return { error: "Failed to fetch remedies. Please try again." }
   }
 }
