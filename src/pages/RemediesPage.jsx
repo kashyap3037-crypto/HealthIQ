@@ -108,7 +108,7 @@ export default function RemediesPage() {
             <div className="fade-in">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>🔍</span>
-                    <h2 style={{ fontSize: '1.25rem' }}>Remedies for: <span style={{ color: 'var(--primary)' }}>{results.query}</span></h2>
+                    <h2 style={{ fontSize: '1.25rem' }}>Remedies for: <span style={{ color: 'var(--primary)' }}>{results.condition || query}</span></h2>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                     {results.remedies.map((item, i) => (
