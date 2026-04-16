@@ -28,20 +28,6 @@ export default function Home() {
 
       <main className="container" style={{ position: 'relative', zIndex: 1, padding: '6rem 1.5rem 8rem' }}>
 
-        {/* ── Branding ── */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3rem' }} className="fade-in">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '3rem', height: '3rem', borderRadius: '0.75rem',
-              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.5rem', boxShadow: '0 8px 16px -4px rgba(14,165,233,0.3)'
-            }}>🩺</div>
-            <span style={{ fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.03em' }}>
-              Health<span style={{ color: 'var(--primary)' }}>IQ</span>
-            </span>
-          </div>
-        </div>
 
         {/* ── Hero Section ── */}
         <header style={{ textAlign: 'center', marginBottom: '5rem' }} className="fade-in">
