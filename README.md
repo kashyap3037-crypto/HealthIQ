@@ -79,9 +79,9 @@ mediguide/
 ---
 
 ## Tech Stack
-- **React 18** — UI framework
-- **Vite** — build tool
-- **Gemini 1.5 Flash** — AI model (free tier)
+- **React 18** — Modern frontend architecture with reusable components
+- **Vite** —Lightning-fast development and optimized production builds
+- **Gemini 1.5 Flash** —AI-powered inference for real-time medical guidance
 - **localStorage** — response caching
 
 ---
