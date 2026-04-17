@@ -6,7 +6,7 @@ const API_KEYS = [
   import.meta.env.VITE_GEMINI_API_KEY_2
 ].filter(key => key && key.length > 20 && !key.includes('your_'))
 
-const COOLDOWN_MS = 60000 // 1 minute cooldown on 429
+const COOLDOWN_MS = 20000 // Reduced to 20s for faster recovery ⏳
 const keyStatus = API_KEYS.map(() => ({ cooldownUntil: 0 }))
 let lastUsedIndex = -1
 
@@ -18,13 +18,14 @@ function getAvailableAI() {
     const nextIdx = (lastUsedIndex + 1 + i) % API_KEYS.length
     if (keyStatus[nextIdx].cooldownUntil < now) {
       lastUsedIndex = nextIdx
+      console.log(`📡 Using API Key ${nextIdx + 1}/${API_KEYS.length}`)
       return { 
         instance: new GoogleGenerativeAI(API_KEYS[nextIdx]), 
         index: nextIdx 
       }
     }
   }
-  throw new Error('RATE_LIMIT') // All staggered keys are busy
+  throw new Error('RATE_LIMIT')
 }
 
 const SYSTEM_PROMPT = `You are HealthIQ, an expert medical information assistant.

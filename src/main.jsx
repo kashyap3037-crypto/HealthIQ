@@ -7,7 +7,7 @@ import './assets/styles/global.css'
 console.log("HealthIQ is starting...");
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  // </React.StrictMode>,
 )
