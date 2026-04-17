@@ -119,29 +119,36 @@ export async function fetchDiseaseInfo(disease) {
     }
   }
 
-  // 4. Try-Catch with Fallback
-  try {
-    // Attempt with Primary Model
-    const parsed = await callAI(PRIMARY_MODEL)
-    if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
-    return parsed
-  } catch (err) {
-    const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
-    
-    if (isOverloaded) {
-      console.warn(`Primary model (${PRIMARY_MODEL}) overloaded. Attempting fallback to ${FALLBACK_MODEL}...`)
-      try {
-        const fallbackParsed = await callAI(FALLBACK_MODEL)
-        if (!fallbackParsed.error) localStorage.setItem(cacheKey, JSON.stringify(fallbackParsed))
-        return fallbackParsed
-      } catch (fallbackErr) {
-        throw new Error('SYSTEM_OVERLOADED') // Both models failing
+  // 4. Try-Catch with Fallback & Retry
+  async function attemptFetch(modelName, retryOnRateLimit = true) {
+    try {
+      const parsed = await callAI(modelName)
+      if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
+      return parsed
+    } catch (err) {
+      const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
+      const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
+
+      if (isRateLimited && retryOnRateLimit) {
+        console.warn(`Rate limit hit on ${modelName}. Retrying in 2 seconds...`)
+        await new Promise(r => setTimeout(r, 2000))
+        return attemptFetch(modelName, false) // Retry once without further retries
       }
+
+      if (isOverloaded && modelName === PRIMARY_MODEL) {
+        console.warn(`Primary model (${PRIMARY_MODEL}) overloaded. Attempting fallback...`)
+        return attemptFetch(FALLBACK_MODEL, true)
+      }
+
+      if (isRateLimited) throw new Error('RATE_LIMIT')
+      if (isOverloaded) throw new Error('SYSTEM_OVERLOADED')
+      if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
+      
+      throw new Error(err.message || 'API_ERROR')
     }
-    if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
-    if (err.message?.includes('429')) throw new Error('RATE_LIMIT')
-    throw new Error(err.message || 'API_ERROR')
   }
+
+  return await attemptFetch(PRIMARY_MODEL)
 }
 
 export async function fetchHomeRemedies(query) {
@@ -169,20 +176,34 @@ export async function fetchHomeRemedies(query) {
   
   Keep descriptions simple. Return ONLY valid JSON.`
 
+  const callRemedies = async (retryOnRateLimit = true) => {
+    try {
+      const result = await model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
+      
+      const start = text.indexOf('{')
+      const end = text.lastIndexOf('}')
+      if (start === -1 || end === -1) throw new Error("PARSE_ERROR")
+      
+      const cleanJson = text.substring(start, end + 1)
+      return JSON.parse(cleanJson)
+    } catch (e) {
+      const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
+      if (isRateLimited && retryOnRateLimit) {
+        console.warn('Home Remedies rate limit. Retrying in 2 seconds...')
+        await new Promise(r => setTimeout(r, 2000))
+        return callRemedies(false)
+      }
+      throw e
+    }
+  }
+
   try {
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
-    
-    // Robust cleaning
-    const start = text.indexOf('{')
-    const end = text.lastIndexOf('}')
-    if (start === -1 || end === -1) throw new Error("Format Error")
-    
-    const cleanJson = text.substring(start, end + 1)
-    return JSON.parse(cleanJson)
+    return await callRemedies()
   } catch (e) {
     console.error('Home Remedies API Error:', e)
-    return { error: "AI service is currently busy or input is invalid. Please try a different query." }
+    const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
+    return { error: isRateLimited ? "Too many requests. Please wait a moment." : "AI service is currently busy. Please try later." }
   }
 }

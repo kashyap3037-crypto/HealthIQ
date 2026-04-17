@@ -83,17 +83,20 @@ export default function ResultPage() {
 
         {!loading && error && (
           <div style={{ maxWidth: '600px', margin: '2rem auto', textAlign: 'center' }}>
-            <ErrorBanner message={error} />
-            <button
-              onClick={() => navigate('/')}
-              style={{ 
-                background: 'var(--primary)', color: 'white', border: 'none', 
-                borderRadius: '0.75rem', padding: '0.75rem 2rem', marginTop: '2.5rem',
-                fontWeight: 700, boxShadow: 'var(--shadow-md)'
-              }}
-            >
-              Return Home
-            </button>
+            <ErrorBanner message={error} onRetry={getInfo} />
+            
+            <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => navigate('/')}
+                style={{ 
+                  background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', 
+                  borderRadius: '0.75rem', padding: '0.75rem 1.5rem',
+                  fontWeight: 600, fontSize: '0.875rem'
+                }}
+              >
+                Go Home
+              </button>
+            </div>
           </div>
         )}
 

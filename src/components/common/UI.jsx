@@ -119,7 +119,7 @@ export function LoadingSpinner() {
   )
 }
 
-export function ErrorBanner({ message }) {
+export function ErrorBanner({ message, onRetry }) {
   const messages = {
     API_KEY_MISSING:
       'No API key found. Create a .env file with VITE_GEMINI_API_KEY=your_key (see .env.example).',
@@ -156,11 +156,30 @@ export function ErrorBanner({ message }) {
           maxWidth: 480,
           lineHeight: 1.7,
           margin: 0,
-          fontWeight: 500,
+          fontWeight: 600,
         }}
       >
         {display}
       </p>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{
+            marginTop: 8,
+            padding: '8px 24px',
+            background: '#991b1b',
+            color: 'white',
+            border: 'none',
+            borderRadius: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 14,
+            boxShadow: '0 4px 12px rgba(153, 27, 27, 0.2)'
+          }}
+        >
+          Try Again Now
+        </button>
+      )}
     </div>
   )
 }
