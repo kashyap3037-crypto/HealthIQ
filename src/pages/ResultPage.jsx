@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { fetchDiseaseInfo } from '../api/gemini.js'
 import DiseaseResult from '../components/disease/DiseaseResult.jsx'
@@ -13,10 +13,15 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const fetchingRef = useRef(false)
+  
   async function getInfo() {
-    if (!name) return
+    if (!name || fetchingRef.current) return
+    
+    fetchingRef.current = true
     setLoading(true)
     setError('')
+    
     try {
       const result = await fetchDiseaseInfo(decodeURIComponent(name))
       if (result.error) {
@@ -26,8 +31,10 @@ export default function ResultPage() {
       }
     } catch (e) {
       setError(e.message || 'API_ERROR')
+    } finally {
+      setLoading(false)
+      fetchingRef.current = false
     }
-    setLoading(false)
   }
 
   const handleDownload = () => {
