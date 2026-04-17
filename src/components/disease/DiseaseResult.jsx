@@ -1,189 +1,232 @@
 
 import { Badge } from '../common/UI.jsx'
 
-const SEV_COLOR = { mild: '#16a34a', moderate: '#d97706', severe: '#dc2626' }
+const SEV_COLOR = { mild: '#15803d', moderate: '#b45309', severe: '#be123c' }
 
 export default function DiseaseResult({ data }) {
   if (!data) return null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '900px', margin: '0 auto' }} className="doctor-report">
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: '2rem', 
+      maxWidth: '850px', 
+      margin: '0 auto',
+      paddingBottom: '4rem'
+    }} className="professional-report">
       
-      {/* Header removed as requested */}
+      {/* ── Condition Header ── */}
+      <div style={{ 
+        borderLeft: '6px solid var(--primary)', 
+        paddingLeft: '1.5rem', 
+        marginBottom: '1rem',
+        marginTop: '1rem' 
+      }}>
+        <label className="field-label" style={{ border: 'none', padding: 0, marginBottom: '0.25rem' }}>Primary Assessment</label>
+        <h1 style={{ 
+          fontSize: '2.25rem', 
+          fontWeight: 800, 
+          color: 'var(--text-main)', 
+          margin: 0,
+          letterSpacing: '-0.01em' 
+        }}>{data.disease_name}</h1>
+      </div>
 
-      {/* ── Section: Patient Summary ── */}
-      <section>
-        <div className="section-header"><span className="section-num">01</span><h2 className="section-title">Case Overview</h2></div>
-        <div className="report-card">
-          <label className="field-label">Primary Condition / Assessment</label>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.25rem' }}>{data.disease_name}</div>
-          <div style={{ marginTop: '1rem' }}>
-            <label className="field-label">General Overview</label>
-            <p style={{ margin: '0.25rem 0 0', lineHeight: 1.6, fontSize: '0.9375rem' }}>{data.overview}</p>
+      {/* ── Overview ── */}
+      <section className="report-card">
+        <label className="field-label">General Medical Overview</label>
+        <p style={{ margin: 0, lineHeight: 1.7, fontSize: '1rem', color: 'var(--text-main)' }}>{data.overview}</p>
+      </section>
+
+      {/* ── Symptoms & Timeline ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="grid-stack">
+        <section className="report-card">
+          <label className="field-label">Symptomatic Analysis</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+            {data.symptoms?.map((s, i) => (
+              <div key={i} style={{ paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{s.name}</span>
+                  <Badge label={s.severity} color={SEV_COLOR[s.severity]} />
+                </div>
+                <p style={{ fontSize: '0.8125rem', margin: 0, color: 'var(--text-muted)' }}>{s.description}</p>
+              </div>
+            ))}
           </div>
+        </section>
+
+        <section className="report-card">
+          <label className="field-label">Recovery Forecast</label>
+          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="data-row"><span>Mild Case Recovery</span><strong>{data.recovery_timeline?.mild_case}</strong></div>
+            <div className="data-row"><span>Severe Case Recovery</span><strong>{data.recovery_timeline?.severe_case}</strong></div>
+            <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>PROGNOSTIC FACTORS</span>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.5 }}>{data.recovery_timeline?.factors}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ── Pharmaceutical Guidance ── */}
+      <section className="report-card" style={{ borderTop: '4px solid var(--primary)' }}>
+        <label className="field-label">Pharmaceutical Insights & Warnings</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginTop: '0.5rem' }}>
+          {data.medicines?.map((m, i) => (
+            <div key={i} style={{ border: '1px solid #f1f5f9', padding: '1rem', borderRadius: '0.5rem' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>
+                {m.name} <span style={{ color: 'var(--primary)', fontSize: '0.75rem' }}>{m.type}</span>
+              </div>
+              <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-main)' }}>{m.purpose}</p>
+              {m.note && <div style={{ color: '#be123c', fontSize: '0.75rem', fontWeight: 700, marginTop: '0.5rem', padding: '0.25rem 0.5rem', background: '#fff1f2', borderRadius: '0.25rem', display: 'inline-block' }}>⚠️ PRECAUTION: {m.note}</div>}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── Section: 02 Analysis ── */}
-      <section>
-        <div className="section-header"><span className="section-num">02</span><h2 className="section-title">Clinical Analysis</h2></div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1.5rem' }} className="grid-stack">
-          <div className="report-card">
-             <label className="field-label">Symptoms Analysis — With severity indicators</label>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              {data.symptoms?.map((s, i) => (
-                <div key={i} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{s.name}</span>
-                    <Badge label={s.severity} color={SEV_COLOR[s.severity]} />
-                  </div>
-                  <p style={{ fontSize: '0.75rem', margin: '0.25rem 0 0', opacity: 0.8 }}>{s.description}</p>
+      {/* ── Action Steps ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="grid-stack">
+        <section className="report-card" style={{ borderTop: '4px solid #15803d' }}>
+          <label className="field-label" style={{ color: '#15803d' }}>Corrective Actions (Do)</label>
+          <ul style={{ paddingLeft: '1.125rem', marginTop: '0.5rem', color: 'var(--text-main)' }}>
+            {data.what_to_do?.map((item, i) => <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9375rem' }}>{item}</li>)}
+          </ul>
+        </section>
+        <section className="report-card" style={{ borderTop: '4px solid #be123c' }}>
+          <label className="field-label" style={{ color: '#be123c' }}>Prohibited Actions (Don't)</label>
+          <ul style={{ paddingLeft: '1.125rem', marginTop: '0.5rem', color: 'var(--text-main)' }}>
+            {data.what_not_to_do?.map((item, i) => <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9375rem' }}>{item}</li>)}
+          </ul>
+        </section>
+      </div>
+
+      {/* ── Diet & Support ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <section className="report-card">
+          <label className="field-label">Nutritional Guidance</label>
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#15803d', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>RECOMMENDED INTAKE</div>
+              {data.food_to_eat?.map((f, i) => <div key={i} style={{ fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text-main)' }}>• <strong>{f.food}</strong>: {f.reason}</div>)}
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#be123c', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>RESTRICTED INTAKE</div>
+              {data.food_to_avoid?.map((f, i) => <div key={i} style={{ fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text-main)' }}>• <strong>{f.food}</strong>: {f.reason}</div>)}
+            </div>
+          </div>
+        </section>
+        
+        <section className="report-card">
+          <label className="field-label">Supportive Home Care</label>
+          <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {data.home_remedies?.map((r, i) => (
+              <div key={i} style={{ padding: '0.75rem', border: '1px solid #f1f5f9', borderRadius: '0.5rem', background: '#f8fafc' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>{r.remedy}</div>
+                <p style={{ margin: 0, fontSize: '0.8125rem', lineHeight: 1.5 }}>{r.how_to_use}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* ── Prevention & Urgent Care ── */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="report-card">
+          <label className="field-label">Proactive Prevention Strategies</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem', marginTop: '0.75rem' }}>
+            {data.prevention_tips?.map((t, i) => (
+              <div key={i} style={{ 
+                border: '1px solid #e2e8f0', 
+                padding: '0.4rem 0.875rem', 
+                borderRadius: '0.5rem', 
+                fontSize: '0.8125rem',
+                background: '#fff' 
+              }}>
+                <span style={{ fontWeight: 700 }}>{t.tip}</span>
+                <span style={{ marginLeft: '0.5rem', opacity: 0.4, fontSize: '0.7rem' }}>| {t.importance.toUpperCase()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {data.emergency_signs && data.emergency_signs.length > 0 && (
+          <div style={{ 
+            background: '#fff1f2', 
+            border: '1px solid #fda4af', 
+            padding: '1.5rem', 
+            borderRadius: '0.75rem' 
+          }}>
+            <label className="field-label" style={{ color: '#9f1239', borderBottomColor: '#fecdd3' }}>🚨 Clinical Red Flags (Seek Immediate Medical Attention)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+              {data.emergency_signs.map((e, i) => (
+                <div key={i} style={{ 
+                  fontSize: '0.875rem', 
+                  color: '#9f1239', 
+                  background: 'rgba(255,255,255,0.7)', 
+                  padding: '1rem', 
+                  borderRadius: '0.5rem',
+                  border: '1px solid #fecdd3'
+                }}>
+                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>{e.sign}</strong>
+                  {e.action}
                 </div>
               ))}
             </div>
           </div>
-          <div className="report-card">
-              <label className="field-label">⏱️ Recovery Timeline — Estimated healing duration</label>
-              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div className="time-row"><span>Mild Case</span><strong>{data.recovery_timeline?.mild_case}</strong></div>
-                <div className="time-row"><span>Severe Case</span><strong>{data.recovery_timeline?.severe_case}</strong></div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: 1.4 }}>
-                    Factors: {data.recovery_timeline?.factors}
-                </p>
-              </div>
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* ── Section: 03 Pharma ── */}
-      <section>
-        <div className="section-header"><span className="section-num">03</span><h2 className="section-title">Medical Guidance</h2></div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-           <div className="report-card" style={{ borderLeft: '4px solid var(--primary)' }}>
-              <label className="field-label">💊 Medicines & Warnings — Safe usage guidance</label>
-              <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                {data.medicines?.map((m, i) => (
-                  <div key={i} style={{ padding: '0.75rem', background: 'rgba(0,165,233,0.05)', borderRadius: '0.5rem' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{m.name} <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({m.type})</span></div>
-                    <p style={{ margin: '0.25rem 0', fontSize: '0.8125rem' }}>{m.purpose}</p>
-                    {m.note && <div style={{ color: '#dc2626', fontSize: '0.6875rem', fontWeight: 600 }}>⚠️ {m.note}</div>}
-                  </div>
-                ))}
-              </div>
-           </div>
-        </div>
-      </section>
-
-      {/* ── Section: 04 Action ── */}
-      <section>
-        <div className="section-header"><span className="section-num">04</span><h2 className="section-title">Action Steps</h2></div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="grid-stack">
-           <div className="report-card" style={{ borderLeft: '4px solid #16a34a' }}>
-              <label className="field-label" style={{ color: '#16a34a' }}>✅ What To Do</label>
-              <ul style={{ paddingLeft: '1.25rem', marginTop: '0.75rem', fontSize: '0.875rem' }}>
-                 {data.what_to_do?.map((item, i) => <li key={i} style={{ marginBottom: '0.4rem' }}>{item}</li>)}
-              </ul>
-           </div>
-           <div className="report-card" style={{ borderLeft: '4px solid #dc2626' }}>
-              <label className="field-label" style={{ color: '#dc2626' }}>🚫 What Not To Do — Clear action steps</label>
-              <ul style={{ paddingLeft: '1.25rem', marginTop: '0.75rem', fontSize: '0.875rem' }}>
-                 {data.what_not_to_do?.map((item, i) => <li key={i} style={{ marginBottom: '0.4rem' }}>{item}</li>)}
-              </ul>
-           </div>
-        </div>
-      </section>
-
-      {/* ── Section: 05 Lifestyle ── */}
-      <section>
-        <div className="section-header"><span className="section-num">05</span><h2 className="section-title">Dietary & Home Remedies</h2></div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-           <div className="report-card">
-              <label className="field-label">🥗 Foods to eat / Food to avoid</label>
-              <div style={{ marginTop: '1rem' }}>
-                 <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#16a34a', marginBottom: '0.5rem' }}>RECOMMENDED:</div>
-                    {data.food_to_eat?.map((f, i) => <div key={i} style={{ fontSize: '0.8125rem', marginBottom: '0.25rem' }}>● <strong>{f.food}</strong>: {f.reason}</div>)}
-                 </div>
-                 <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626', marginBottom: '0.5rem' }}>AVOID:</div>
-                    {data.food_to_avoid?.map((f, i) => <div key={i} style={{ fontSize: '0.8125rem', marginBottom: '0.25rem' }}>● <strong>{f.food}</strong>: {f.reason}</div>)}
-                 </div>
-              </div>
-           </div>
-           <div className="report-card">
-              <label className="field-label">🌿 Home Remedies</label>
-              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                 {data.home_remedies?.map((r, i) => (
-                   <div key={i} style={{ padding: '0.6rem', border: '1px solid var(--border-color)', borderRadius: '0.4rem' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.8125rem' }}>{r.remedy}</div>
-                      <p style={{ margin: '0.25rem 0', fontSize: '0.75rem', opacity: 0.8 }}>{r.how_to_use}</p>
-                   </div>
-                 ))}
-              </div>
-           </div>
-        </div>
-      </section>
-
-      {/* ── Section: 06 Prevention ── */}
-      <section>
-        <div className="section-header"><span className="section-num">06</span><h2 className="section-title">Prevention & Warning</h2></div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-           <div className="report-card">
-              <label className="field-label">🛡️ Prevention Tips — Stay protected</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem' }}>
-                 {data.prevention_tips?.map((t, i) => (
-                    <div key={i} style={{ background: 'rgba(0,0,0,0.03)', padding: '0.5rem 1rem', borderRadius: '1rem', fontSize: '0.8125rem' }}>
-                       <strong>{t.tip}</strong> <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>[{t.importance.toUpperCase()}]</span>
-                    </div>
-                 ))}
-              </div>
-           </div>
-
-           {data.emergency_signs && data.emergency_signs.length > 0 && (
-             <div className="report-card" style={{ background: '#fef2f2', border: '1px solid #fee2e2' }}>
-               <label className="field-label" style={{ color: '#991b1b' }}>🚨 Emergency Signs — Identify critical conditions</label>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                 {data.emergency_signs.map((e, i) => (
-                   <div key={i} style={{ fontSize: '0.8125rem', color: '#991b1b', background: '#fff', padding: '0.75rem', borderRadius: '0.5rem', border: '1px dashed #fee2e2' }}>
-                     <strong>{e.sign}</strong>: {e.action}
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', opacity: 0.6, fontSize: '0.75rem', fontStyle: 'italic' }}>
-        {data.disclaimer}
-      </div>
+      {/* ── Disclaimer ── */}
+      <footer style={{ 
+        marginTop: '2rem', 
+        padding: '1.5rem', 
+        background: '#f1f5f9', 
+        borderRadius: '0.75rem',
+        fontSize: '0.8125rem', 
+        color: 'var(--text-muted)',
+        textAlign: 'center',
+        lineHeight: 1.6
+      }}>
+        <strong>MEDICAL DISCLAIMER:</strong> {data.disclaimer}
+      </footer>
 
       <style>{`
-        .doctor-report { font-family: 'Inter', sans-serif; color: var(--text-main); }
-        .section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-        .section-num { 
-          font-size: 0.75rem; font-weight: 900; background: var(--text-main); color: var(--bg-main);
-          width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; border-radius: 4px;
+        .professional-report { 
+          font-family: 'Inter', -apple-system, sans-serif; 
+          color: var(--text-main); 
         }
-        .section-title { margin: 0; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
-        .report-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 0.5rem; }
+        .report-card { 
+          background: #fff; 
+          border: 1px solid #e2e8f0; 
+          padding: 1.5rem; 
+          border-radius: 0.75rem;
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
         .field-label { 
           display: block; 
-          font-size: 0.75rem; 
+          font-size: 0.65rem; 
           font-weight: 800; 
           text-transform: uppercase; 
-          letter-spacing: 0.05em; 
-          color: var(--text-main);
-          margin-bottom: 0.5rem; 
-          border-bottom: 1px solid var(--border-color);
-          padding-bottom: 0.25rem;
+          letter-spacing: 0.075em; 
+          color: var(--text-muted);
+          margin-bottom: 0.75rem; 
+          border-bottom: 2px solid #f1f5f9;
+          padding-bottom: 0.5rem;
         }
-        .time-row { display: flex; justify-content: space-between; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 0.25rem; font-size: 0.8125rem; }
-        @media (max-width: 600px) {
+        .data-row { 
+          display: flex; 
+          justify-content: space-between; 
+          padding: 0.625rem 0; 
+          border-bottom: 1px dashed #e2e8f0; 
+          font-size: 0.875rem; 
+        }
+        .data-row:last-of-type { border: none; }
+        
+        @media (max-width: 650px) {
            .grid-stack { grid-template-columns: 1fr !important; }
-           .report-card { padding: 1rem !important; }
-           h1 { font-size: 1.25rem !important; }
+           .report-card { padding: 1.25rem !important; }
+           h1 { font-size: 1.75rem !important; }
         }
       `}</style>
     </div>
