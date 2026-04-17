@@ -71,9 +71,8 @@ Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
 }
 
 export async function fetchDiseaseInfo(disease) {
-  const PRIMARY_MODEL = 'gemini-1.5-flash'
-  const FALLBACK_MODEL = 'gemini-1.5-flash-8b'
-  const TERTIARY_MODEL = 'gemini-2.0-flash'
+  const PRIMARY_MODEL = 'gemini-3-flash-preview'
+  const FALLBACK_MODEL = 'gemini-2.0-flash'
 
   // 1. Check API key
   if (!API_KEY || API_KEY === 'your_gemini_api_key_here') throw new Error('API_KEY_MISSING')
@@ -130,26 +129,17 @@ export async function fetchDiseaseInfo(disease) {
       const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
       const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
 
-      // Case 1: Rate Limit - Try a small delay and ONE retry with the same model
       if (isRateLimited && retryOnRateLimit) {
-        console.warn(`Rate limit hit on ${modelName}. Retrying in 3 seconds...`)
-        await new Promise(r => setTimeout(r, 3000))
-        return attemptFetch(modelName, false) 
+        console.warn(`Rate limit hit on ${modelName}. Retrying in 2 seconds...`)
+        await new Promise(r => setTimeout(r, 2000))
+        return attemptFetch(modelName, false) // Retry once without further retries
       }
 
-      // Case 2: Overloaded or Rate Limit exhausted - Cascade to next model
-      if (isOverloaded || isRateLimited) {
-        if (modelName === PRIMARY_MODEL) {
-          console.warn(`Switching to Fallback Model (${FALLBACK_MODEL})...`)
-          return attemptFetch(FALLBACK_MODEL, true)
-        }
-        if (modelName === FALLBACK_MODEL) {
-          console.warn(`Switching to Tertiary Model (${TERTIARY_MODEL})...`)
-          return attemptFetch(TERTIARY_MODEL, true)
-        }
+      if (isOverloaded && modelName === PRIMARY_MODEL) {
+        console.warn(`Primary model (${PRIMARY_MODEL}) overloaded. Attempting fallback...`)
+        return attemptFetch(FALLBACK_MODEL, true)
       }
 
-      // Case 3: Terminal Errors
       if (isRateLimited) throw new Error('RATE_LIMIT')
       if (isOverloaded) throw new Error('SYSTEM_OVERLOADED')
       if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')

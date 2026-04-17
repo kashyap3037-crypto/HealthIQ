@@ -12,16 +12,14 @@ export default function ResultPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
   const fetchingRef = useRef(false)
-  
+
   async function getInfo() {
     if (!name || fetchingRef.current) return
-    
     fetchingRef.current = true
+    
     setLoading(true)
     setError('')
-    
     try {
       const result = await fetchDiseaseInfo(decodeURIComponent(name))
       if (result.error) {
