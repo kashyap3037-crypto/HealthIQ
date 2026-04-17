@@ -15,6 +15,7 @@ STRICT RULES:
 - If the input is symptoms, treat them as the primary context for the "disease_name" and details.
 - Be specific — avoid vague answers — be precise.
 - Use simple English in the JSON output fields.
+- For Home Remedies: Provide AT LEAST 4-5 specific remedies with detailed STEP-BY-STEP instructions.
 - If the input is completely unrecognizable or non-medical, return: {"error": "Input not recognized as a medical condition or symptoms. Please try again."}
 - Always include a disclaimer field in every response.`
 
@@ -40,7 +41,7 @@ const PROVIDERS = [
 ];
 
 // --- Cooldown & Rotation Management ---
-const COOLDOWN_MS = 60 * 1000; // 1 minute cooldown
+const COOLDOWN_MS = 60 * 1000;
 
 function getCooldowns() {
   try {
@@ -116,16 +117,11 @@ async function callGroq(provider, prompt, systemInstruction) {
 export async function fetchDiseaseInfo(disease) {
   const cacheKey = `mg_${disease.toLowerCase().trim()}`;
   
-  // 1. Cache Check
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) return JSON.parse(cached);
   } catch {}
 
-  const prompt = `Input: ${disease} - Return full clinical JSON object. (Follow all previously established keys)`;
-  // Note: For brevity in this call, I'm assuming the system instruction handles the keys, 
-  // but to be safe I'll use a shortened version of buildPrompt if needed.
-  // Actually, I'll use the FULL prompt logic to be safe.
   const fullPrompt = `Input: ${disease}
 
 Return a detailed JSON object with EXACTLY these keys and formats:
@@ -139,33 +135,25 @@ Return a detailed JSON object with EXACTLY these keys and formats:
   "food_to_eat": [{ "food": "...", "reason": "..." }],
   "food_to_avoid": [{ "food": "...", "reason": "..." }],
   "emergency_signs": [{ "sign": "...", "action": "..." }],
-  "home_remedies": [{ "remedy": "...", "how_to_use": "...", "effectiveness": "..." }],
+  "home_remedies": [
+     { "remedy": "Remedy Name", "how_to_use": "DETAILED STEP-BY-STEP INSTRUCTIONS (at least 2-3 sentences)", "effectiveness": "..." }
+  ],
   "recovery_timeline": { "mild_case": "...", "moderate_case": "...", "severe_case": "...", "factors": "..." },
   "prevention_tips": [{ "tip": "...", "importance": "..." }],
   "disclaimer": "..."
 }
-Return valid JSON only.`;
+IMPORTANT: Provide AT LEAST 5 detailed home remedies. Return valid JSON only.`;
 
   const cooldowns = getCooldowns();
   let startIndex = getNextProviderIndex();
   let lastError = null;
 
-  // 2. Rotation & Fallback Loop
   for (let i = 0; i < PROVIDERS.length; i++) {
     const idx = (startIndex + i) % PROVIDERS.length;
     const provider = PROVIDERS[idx];
 
-    // Check Cooldown
-    if (cooldowns[provider.id] && cooldowns[provider.id] > Date.now()) {
-      console.warn(`Skipping ${provider.id} - on cooldown.`);
-      continue;
-    }
-
-    // Check API Key Presence
-    if (!provider.apiKey || provider.apiKey.includes('placeholder')) {
-       console.warn(`Skipping ${provider.id} - Missing API Key.`);
-       continue;
-    }
+    if (cooldowns[provider.id] && cooldowns[provider.id] > Date.now()) continue;
+    if (!provider.apiKey || provider.apiKey.includes('placeholder')) continue;
 
     try {
       console.log(`Attempting with ${provider.id} (${provider.type})...`);
@@ -176,14 +164,12 @@ Return valid JSON only.`;
         text = await callGroq(provider, fullPrompt, SYSTEM_PROMPT);
       }
 
-      // Extract & Parse JSON
       const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
+      const end = text.lastIndexOf('}')
       if (start === -1 || end === -1) throw new Error('PARSE_ERROR');
       
       const parsed = JSON.parse(text.substring(start, end + 1));
       
-      // Success! Update rotation and cache
       incrementProviderIndex();
       if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed));
       return parsed;
@@ -191,25 +177,28 @@ Return valid JSON only.`;
     } catch (err) {
       console.error(`${provider.id} failed:`, err.message);
       lastError = err;
-
       const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota') || err.message?.includes('RATE_LIMIT');
-      if (isRateLimited) {
-        setCooldown(provider.id);
-      }
-      // Continue to next provider...
+      if (isRateLimited) setCooldown(provider.id);
     }
   }
 
-  // If we reach here, all providers failed
-  if (lastError?.message?.includes('RATE_LIMIT') || lastError?.message?.toLowerCase().includes('quota')) {
-    throw new Error('RATE_LIMIT');
-  }
+  if (lastError?.message?.includes('RATE_LIMIT')) throw new Error('RATE_LIMIT');
   throw new Error(lastError?.message || 'API_ERROR');
 }
 
 export async function fetchHomeRemedies(query) {
-  const prompt = `Provide 6-7 natural home remedies for: "${query}". 
-  Return ONLY a JSON object with this structure: { "condition": "...", "remedies": [{ "name": "...", "use": "...", "benefit": "..." }] }`;
+  const prompt = `Provide AT LEAST 5 natural home remedies for: "${query}". 
+  Give detailed STEP-BY-STEP instructions for each remedy.
+  
+  Return ONLY a JSON object with this EXACT structure:
+  {
+    "condition": "The disease name",
+    "remedies": [
+      { "name": "Remedy name", "use": "Step-by-step instructions (Detailed)", "benefit": "Why it works" }
+    ]
+  }
+  
+  Return ONLY valid JSON.`;
 
   const cooldowns = getCooldowns();
   let startIndex = getNextProviderIndex();
