@@ -94,8 +94,8 @@ Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
 }
 
 export async function fetchDiseaseInfo(disease) {
-  const PRIMARY_MODEL = 'gemini-1.5-flash' // High quota model
-  const FALLBACK_MODEL = 'gemini-2.0-flash'
+  const PRIMARY_MODEL = 'gemini-2.0-flash' // Updated from legacy flash
+  const FALLBACK_MODEL = 'gemini-1.5-flash-latest'
 
   // 1. Local Storage Cache (🧠 Caching)
   const cacheKey = `mg_${disease.toLowerCase().trim()}`
@@ -189,7 +189,7 @@ export async function fetchHomeRemedies(query) {
     
     try {
       const model = instance.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-latest',
         generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
       })
       const result = await model.generateContent(prompt)
