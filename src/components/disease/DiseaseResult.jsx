@@ -9,11 +9,7 @@ export default function DiseaseResult({ data }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '900px', margin: '0 auto' }} className="doctor-report">
       
-      {/* ── Header ── */}
-      <div style={{ textAlign: 'center', borderBottom: '2px solid var(--text-main)', paddingBottom: '1.5rem', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.75rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Clinical Analysis Report</h1>
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', opacity: 0.7 }}>Report ID: {Math.random().toString(36).substr(2, 9).toUpperCase()} | Date: {new Date().toLocaleDateString()}</p>
-      </div>
+      {/* Header removed as requested */}
 
       {/* ── Section: Patient Summary ── */}
       <section>
@@ -172,7 +168,17 @@ export default function DiseaseResult({ data }) {
         }
         .section-title { margin: 0; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
         .report-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 0.5rem; }
-        .field-label { display: block; font-size: 0.625rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.5; margin-bottom: 0.25rem; }
+        .field-label { 
+          display: block; 
+          font-size: 0.75rem; 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          letter-spacing: 0.05em; 
+          color: var(--text-main);
+          margin-bottom: 0.5rem; 
+          border-bottom: 1px solid var(--border-color);
+          padding-bottom: 0.25rem;
+        }
         .time-row { display: flex; justify-content: space-between; padding: 0.5rem; background: rgba(0,0,0,0.02); border-radius: 0.25rem; font-size: 0.8125rem; }
         @media (max-width: 600px) {
            .grid-stack { grid-template-columns: 1fr !important; }
