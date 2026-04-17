@@ -1,8 +1,31 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Reads VITE_GEMINI_API_KEY from your .env file automatically
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const genAI = new GoogleGenerativeAI(API_KEY)
+// ── Key Management & Rotation ──
+const API_KEYS = [
+  import.meta.env.VITE_GEMINI_API_KEY,
+  import.meta.env.VITE_GEMINI_API_KEY_2
+].filter(key => key && key.length > 20 && !key.includes('your_'))
+
+const COOLDOWN_MS = 60000 // 1 minute cooldown on 429
+const keyStatus = API_KEYS.map(() => ({ cooldownUntil: 0 }))
+let lastUsedIndex = -1
+
+function getAvailableAI() {
+  if (API_KEYS.length === 0) throw new Error('API_KEY_MISSING')
+  
+  const now = Date.now()
+  for (let i = 0; i < API_KEYS.length; i++) {
+    const nextIdx = (lastUsedIndex + 1 + i) % API_KEYS.length
+    if (keyStatus[nextIdx].cooldownUntil < now) {
+      lastUsedIndex = nextIdx
+      return { 
+        instance: new GoogleGenerativeAI(API_KEYS[nextIdx]), 
+        index: nextIdx 
+      }
+    }
+  }
+  throw new Error('RATE_LIMIT') // All staggered keys are busy
+}
 
 const SYSTEM_PROMPT = `You are HealthIQ, an expert medical information assistant.
 You specialize in analyzing symptoms and medical conditions provided in multiple languages including English, Hindi, Gujarati, and mixed-language inputs (Hinglish/Gujlish).
@@ -71,79 +94,76 @@ Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
 }
 
 export async function fetchDiseaseInfo(disease) {
-  const PRIMARY_MODEL = 'gemini-3-flash-preview'
+  const PRIMARY_MODEL = 'gemini-1.5-flash' // High quota model
   const FALLBACK_MODEL = 'gemini-2.0-flash'
 
-  // 1. Check API key
-  if (!API_KEY || API_KEY === 'your_gemini_api_key_here') throw new Error('API_KEY_MISSING')
-
-  // 2. Local Storage Cache
+  // 1. Local Storage Cache (🧠 Caching)
   const cacheKey = `mg_${disease.toLowerCase().trim()}`
   try {
     const cached = localStorage.getItem(cacheKey)
     if (cached) return JSON.parse(cached)
   } catch {}
 
-  // 3. API Call Function
+  // 2. API Call Function
   const callAI = async (modelName) => {
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction: SYSTEM_PROMPT,
-      generationConfig: { 
-        temperature: 0.2, 
-        topP: 0.8, 
-        maxOutputTokens: 3000,
-        responseMimeType: "application/json" // Force JSON mode
-      },
-    })
-    const result = await model.generateContent(buildPrompt(disease))
-    const response = await result.response
-    let text = response.text()
-
-    if (!text || text.trim().length === 0) {
-      throw new Error('NO_RESPONSE')
-    }
-
-    // Robust JSON extraction
+    const { instance, index } = getAvailableAI()
+    
     try {
-      // Find the first { and the last }
+      const model = instance.getGenerativeModel({
+        model: modelName,
+        systemInstruction: SYSTEM_PROMPT,
+        generationConfig: { 
+          temperature: 0.2, 
+          topP: 0.8, 
+          maxOutputTokens: 3000,
+          responseMimeType: "application/json"
+        },
+      })
+      
+      const result = await model.generateContent(buildPrompt(disease))
+      const response = await result.response
+      let text = response.text()
+
+      if (!text || text.trim().length === 0) throw new Error('NO_RESPONSE')
+
       const start = text.indexOf('{')
       const end = text.lastIndexOf('}')
       if (start === -1 || end === -1) throw new Error('NO_JSON_FOUND')
       
       const jsonStr = text.substring(start, end + 1)
-      return JSON.parse(jsonStr)
-    } catch (e) {
-      console.error('JSON Parse Error. Raw text:', text)
-      throw new Error('PARSE_ERROR')
+      const parsed = JSON.parse(jsonStr)
+      
+      if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
+      return parsed
+
+    } catch (err) {
+      if (err.message?.includes('429')) {
+        keyStatus[index].cooldownUntil = Date.now() + COOLDOWN_MS // ⏳ Cooldown
+      }
+      throw err
     }
   }
 
-  // 4. Try-Catch with Fallback & Retry
-  async function attemptFetch(modelName, retryOnRateLimit = true) {
+  // 3. Retry Logic with Key Swapping
+  async function attemptFetch(modelName, retriesLeft = 2) {
     try {
-      const parsed = await callAI(modelName)
-      if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
-      return parsed
+      return await callAI(modelName)
     } catch (err) {
       const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
       const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
 
-      if (isRateLimited && retryOnRateLimit) {
-        console.warn(`Rate limit hit on ${modelName}. Retrying in 2 seconds...`)
-        await new Promise(r => setTimeout(r, 2000))
-        return attemptFetch(modelName, false) // Retry once without further retries
+      if (isRateLimited && retriesLeft > 0) {
+        console.warn(`Key rate limit hit. Rotating key and retrying... (${retriesLeft} left)`)
+        return attemptFetch(modelName, retriesLeft - 1)
       }
 
       if (isOverloaded && modelName === PRIMARY_MODEL) {
-        console.warn(`Primary model (${PRIMARY_MODEL}) overloaded. Attempting fallback...`)
-        return attemptFetch(FALLBACK_MODEL, true)
+        return attemptFetch(FALLBACK_MODEL, retriesLeft)
       }
 
       if (isRateLimited) throw new Error('RATE_LIMIT')
       if (isOverloaded) throw new Error('SYSTEM_OVERLOADED')
       if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
-      
       throw new Error(err.message || 'API_ERROR')
     }
   }
@@ -152,17 +172,6 @@ export async function fetchDiseaseInfo(disease) {
 }
 
 export async function fetchHomeRemedies(query) {
-  // 1. Check API key
-  if (!API_KEY || API_KEY === 'your_gemini_api_key_here') return { error: "API key is missing. Please check your .env file." }
-
-  const model = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash',
-    generationConfig: { 
-      temperature: 0.1, 
-      responseMimeType: "application/json" 
-    }
-  })
-  
   const prompt = `Provide 6-7 natural home remedies for: "${query}". 
   The input can be in English, Hindi, Gujarati, or Hinglish.
   
@@ -173,11 +182,16 @@ export async function fetchHomeRemedies(query) {
       { "name": "Remedy name", "use": "How to use", "benefit": "Why it works" }
     ]
   }
-  
-  Keep descriptions simple. Return ONLY valid JSON.`
+  Return ONLY valid JSON.`
 
-  const callRemedies = async (retryOnRateLimit = true) => {
+  const callRemedies = async (retriesLeft = 2) => {
+    const { instance, index } = getAvailableAI()
+    
     try {
+      const model = instance.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
+      })
       const result = await model.generateContent(prompt)
       const response = await result.response
       const text = response.text()
@@ -188,12 +202,12 @@ export async function fetchHomeRemedies(query) {
       
       const cleanJson = text.substring(start, end + 1)
       return JSON.parse(cleanJson)
+
     } catch (e) {
       const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
-      if (isRateLimited && retryOnRateLimit) {
-        console.warn('Home Remedies rate limit. Retrying in 2 seconds...')
-        await new Promise(r => setTimeout(r, 2000))
-        return callRemedies(false)
+      if (isRateLimited) {
+        keyStatus[index].cooldownUntil = Date.now() + COOLDOWN_MS
+        if (retriesLeft > 0) return callRemedies(retriesLeft - 1)
       }
       throw e
     }
@@ -202,7 +216,6 @@ export async function fetchHomeRemedies(query) {
   try {
     return await callRemedies()
   } catch (e) {
-    console.error('Home Remedies API Error:', e)
     const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
     return { error: isRateLimited ? "Too many requests. Please wait a moment." : "AI service is currently busy. Please try later." }
   }
