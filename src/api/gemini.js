@@ -1,33 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// ── Key Management & Rotation ──
-const API_KEYS = [
-  import.meta.env.VITE_GEMINI_API_KEY,
-  import.meta.env.VITE_GEMINI_API_KEY_2
-].filter(key => key && key.length > 20 && !key.includes('your_'))
-
-const COOLDOWN_MS = 20000 // Reduced to 20s for faster recovery ⏳
-const keyStatus = API_KEYS.map(() => ({ cooldownUntil: 0 }))
-let lastUsedIndex = -1
-
-function getAvailableAI() {
-  if (API_KEYS.length === 0) throw new Error('API_KEY_MISSING')
-  
-  const now = Date.now()
-  for (let i = 0; i < API_KEYS.length; i++) {
-    const nextIdx = (lastUsedIndex + 1 + i) % API_KEYS.length
-    if (keyStatus[nextIdx].cooldownUntil < now) {
-      lastUsedIndex = nextIdx
-      console.log(`📡 Using API Key ${nextIdx + 1}/${API_KEYS.length}`)
-      return { 
-        instance: new GoogleGenerativeAI(API_KEYS[nextIdx]), 
-        index: nextIdx 
-      }
-    }
-  }
-  throw new Error('RATE_LIMIT')
-}
-
+// --- Configuration ---
 const SYSTEM_PROMPT = `You are HealthIQ, an expert medical information assistant.
 You specialize in analyzing symptoms and medical conditions provided in multiple languages including English, Hindi, Gujarati, and mixed-language inputs (Hinglish/Gujlish).
 
@@ -45,179 +18,228 @@ STRICT RULES:
 - If the input is completely unrecognizable or non-medical, return: {"error": "Input not recognized as a medical condition or symptoms. Please try again."}
 - Always include a disclaimer field in every response.`
 
-function buildPrompt(userInput) {
-  return `Input: ${userInput}
-
-Return a detailed JSON object with EXACTLY these keys and formats:
-
-{
-  "disease_name": "Full official name of the disease",
-  "overview": "2-3 sentence plain English summary of what this disease is",
-  "symptoms": [
-    { "name": "Symptom name", "severity": "mild/moderate/severe", "description": "1 line explanation" }
-  ],
-  "medicines": [
-    { "name": "Medicine name", "type": "antibiotic/painkiller/antiviral/etc", "purpose": "what it does", "note": "important warning if any, or empty string" }
-  ],
-  "what_to_do": [
-    "Specific action 1",
-    "Specific action 2"
-  ],
-  "what_not_to_do": [
-    "Specific thing to avoid 1",
-    "Specific thing to avoid 2"
-  ],
-  "food_to_eat": [
-    { "food": "Food name", "reason": "why it helps recovery" }
-  ],
-  "food_to_avoid": [
-    { "food": "Food name", "reason": "why it is harmful" }
-  ],
-  "emergency_signs": [
-    { "sign": "Danger sign to watch for", "action": "What to do immediately" }
-  ],
-  "home_remedies": [
-    { "remedy": "Remedy name", "how_to_use": "Step by step instruction", "effectiveness": "proven/traditional/anecdotal" }
-  ],
-  "recovery_timeline": {
-    "mild_case": "e.g. 3-5 days",
-    "moderate_case": "e.g. 1-2 weeks",
-    "severe_case": "e.g. 3-4 weeks",
-    "factors": "What affects how fast someone recovers"
+const PROVIDERS = [
+  { 
+    id: 'GEMINI_1', 
+    type: 'gemini', 
+    apiKey: import.meta.env.VITE_GEMINI_API_KEY, 
+    model: 'gemini-1.5-flash' 
   },
-  "prevention_tips": [
-    { "tip": "Prevention action", "importance": "high/medium/low" }
-  ],
-  "disclaimer": "This information is for educational purposes only. Always consult a qualified healthcare professional for diagnosis and treatment."
+  { 
+    id: 'GEMINI_2', 
+    type: 'gemini', 
+    apiKey: import.meta.env.VITE_GEMINI_API_KEY_2, 
+    model: 'gemini-1.5-flash' 
+  },
+  { 
+    id: 'GROQ_1', 
+    type: 'groq', 
+    apiKey: import.meta.env.VITE_GROQ_API_KEY, 
+    model: 'llama-3.3-70b-versatile' 
+  }
+];
+
+// --- Cooldown & Rotation Management ---
+const COOLDOWN_MS = 60 * 1000; // 1 minute cooldown
+
+function getCooldowns() {
+  try {
+    return JSON.parse(localStorage.getItem('hiq_cooldowns') || '{}');
+  } catch { return {}; }
 }
 
-Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
+function setCooldown(providerId) {
+  const cooldowns = getCooldowns();
+  cooldowns[providerId] = Date.now() + COOLDOWN_MS;
+  localStorage.setItem('hiq_cooldowns', JSON.stringify(cooldowns));
 }
+
+function getNextProviderIndex() {
+  const current = parseInt(localStorage.getItem('hiq_provider_idx') || '0');
+  return current % PROVIDERS.length;
+}
+
+function incrementProviderIndex() {
+  const current = parseInt(localStorage.getItem('hiq_provider_idx') || '0');
+  localStorage.setItem('hiq_provider_idx', (current + 1) % PROVIDERS.length);
+}
+
+// --- API Calls ---
+
+async function callGemini(provider, prompt, systemInstruction) {
+  const genAI = new GoogleGenerativeAI(provider.apiKey);
+  const model = genAI.getGenerativeModel({
+    model: provider.model,
+    systemInstruction,
+    generationConfig: { 
+      temperature: 0.2, 
+      maxOutputTokens: 3000,
+      responseMimeType: "application/json"
+    },
+  });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
+}
+
+async function callGroq(provider, prompt, systemInstruction) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${provider.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: provider.model,
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const status = response.status;
+    if (status === 429) throw new Error('RATE_LIMIT');
+    throw new Error(errorData.error?.message || 'GROQ_ERROR');
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+// --- Main Service Logic ---
 
 export async function fetchDiseaseInfo(disease) {
-  const PRIMARY_MODEL = 'gemini-2.0-flash' // Updated from legacy flash
-  const FALLBACK_MODEL = 'gemini-1.5-flash-latest'
-
-  // 1. Local Storage Cache (🧠 Caching)
-  const cacheKey = `mg_${disease.toLowerCase().trim()}`
+  const cacheKey = `mg_${disease.toLowerCase().trim()}`;
+  
+  // 1. Cache Check
   try {
-    const cached = localStorage.getItem(cacheKey)
-    if (cached) return JSON.parse(cached)
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
   } catch {}
 
-  // 2. API Call Function
-  const callAI = async (modelName) => {
-    const { instance, index } = getAvailableAI()
-    
+  const prompt = `Input: ${disease} - Return full clinical JSON object. (Follow all previously established keys)`;
+  // Note: For brevity in this call, I'm assuming the system instruction handles the keys, 
+  // but to be safe I'll use a shortened version of buildPrompt if needed.
+  // Actually, I'll use the FULL prompt logic to be safe.
+  const fullPrompt = `Input: ${disease}
+
+Return a detailed JSON object with EXACTLY these keys and formats:
+{
+  "disease_name": "Full official name",
+  "overview": "Summary",
+  "symptoms": [{ "name": "...", "severity": "...", "description": "..." }],
+  "medicines": [{ "name": "...", "type": "...", "purpose": "...", "note": "..." }],
+  "what_to_do": ["..."],
+  "what_not_to_do": ["..."],
+  "food_to_eat": [{ "food": "...", "reason": "..." }],
+  "food_to_avoid": [{ "food": "...", "reason": "..." }],
+  "emergency_signs": [{ "sign": "...", "action": "..." }],
+  "home_remedies": [{ "remedy": "...", "how_to_use": "...", "effectiveness": "..." }],
+  "recovery_timeline": { "mild_case": "...", "moderate_case": "...", "severe_case": "...", "factors": "..." },
+  "prevention_tips": [{ "tip": "...", "importance": "..." }],
+  "disclaimer": "..."
+}
+Return valid JSON only.`;
+
+  const cooldowns = getCooldowns();
+  let startIndex = getNextProviderIndex();
+  let lastError = null;
+
+  // 2. Rotation & Fallback Loop
+  for (let i = 0; i < PROVIDERS.length; i++) {
+    const idx = (startIndex + i) % PROVIDERS.length;
+    const provider = PROVIDERS[idx];
+
+    // Check Cooldown
+    if (cooldowns[provider.id] && cooldowns[provider.id] > Date.now()) {
+      console.warn(`Skipping ${provider.id} - on cooldown.`);
+      continue;
+    }
+
+    // Check API Key Presence
+    if (!provider.apiKey || provider.apiKey.includes('placeholder')) {
+       console.warn(`Skipping ${provider.id} - Missing API Key.`);
+       continue;
+    }
+
     try {
-      const model = instance.getGenerativeModel({
-        model: modelName,
-        systemInstruction: SYSTEM_PROMPT,
-        generationConfig: { 
-          temperature: 0.2, 
-          topP: 0.8, 
-          maxOutputTokens: 3000,
-          responseMimeType: "application/json"
-        },
-      })
-      
-      const result = await model.generateContent(buildPrompt(disease))
-      const response = await result.response
-      let text = response.text()
+      console.log(`Attempting with ${provider.id} (${provider.type})...`);
+      let text = '';
+      if (provider.type === 'gemini') {
+        text = await callGemini(provider, fullPrompt, SYSTEM_PROMPT);
+      } else {
+        text = await callGroq(provider, fullPrompt, SYSTEM_PROMPT);
+      }
 
-      if (!text || text.trim().length === 0) throw new Error('NO_RESPONSE')
-
-      const start = text.indexOf('{')
-      const end = text.lastIndexOf('}')
-      if (start === -1 || end === -1) throw new Error('NO_JSON_FOUND')
+      // Extract & Parse JSON
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start === -1 || end === -1) throw new Error('PARSE_ERROR');
       
-      const jsonStr = text.substring(start, end + 1)
-      const parsed = JSON.parse(jsonStr)
+      const parsed = JSON.parse(text.substring(start, end + 1));
       
-      if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed))
-      return parsed
+      // Success! Update rotation and cache
+      incrementProviderIndex();
+      if (!parsed.error) localStorage.setItem(cacheKey, JSON.stringify(parsed));
+      return parsed;
 
     } catch (err) {
-      if (err.message?.includes('429')) {
-        keyStatus[index].cooldownUntil = Date.now() + COOLDOWN_MS // ⏳ Cooldown
+      console.error(`${provider.id} failed:`, err.message);
+      lastError = err;
+
+      const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota') || err.message?.includes('RATE_LIMIT');
+      if (isRateLimited) {
+        setCooldown(provider.id);
       }
-      throw err
+      // Continue to next provider...
     }
   }
 
-  // 3. Retry Logic with Key Swapping
-  async function attemptFetch(modelName, retriesLeft = 2) {
-    try {
-      return await callAI(modelName)
-    } catch (err) {
-      const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota')
-      const isOverloaded = err.message?.includes('503') || err.message?.toLowerCase().includes('high demand')
-
-      if (isRateLimited && retriesLeft > 0) {
-        console.warn(`Key rate limit hit. Rotating key and retrying... (${retriesLeft} left)`)
-        return attemptFetch(modelName, retriesLeft - 1)
-      }
-
-      if (isOverloaded && modelName === PRIMARY_MODEL) {
-        return attemptFetch(FALLBACK_MODEL, retriesLeft)
-      }
-
-      if (isRateLimited) throw new Error('RATE_LIMIT')
-      if (isOverloaded) throw new Error('SYSTEM_OVERLOADED')
-      if (err.message?.includes('API_KEY')) throw new Error('API_KEY_INVALID')
-      throw new Error(err.message || 'API_ERROR')
-    }
+  // If we reach here, all providers failed
+  if (lastError?.message?.includes('RATE_LIMIT') || lastError?.message?.toLowerCase().includes('quota')) {
+    throw new Error('RATE_LIMIT');
   }
-
-  return await attemptFetch(PRIMARY_MODEL)
+  throw new Error(lastError?.message || 'API_ERROR');
 }
 
 export async function fetchHomeRemedies(query) {
   const prompt = `Provide 6-7 natural home remedies for: "${query}". 
-  The input can be in English, Hindi, Gujarati, or Hinglish.
+  Return ONLY a JSON object with this structure: { "condition": "...", "remedies": [{ "name": "...", "use": "...", "benefit": "..." }] }`;
+
+  const cooldowns = getCooldowns();
+  let startIndex = getNextProviderIndex();
   
-  Return ONLY a JSON object with this EXACT structure:
-  {
-    "condition": "The disease name",
-    "remedies": [
-      { "name": "Remedy name", "use": "How to use", "benefit": "Why it works" }
-    ]
-  }
-  Return ONLY valid JSON.`
+  for (let i = 0; i < PROVIDERS.length; i++) {
+    const idx = (startIndex + i) % PROVIDERS.length;
+    const provider = PROVIDERS[idx];
 
-  const callRemedies = async (retriesLeft = 2) => {
-    const { instance, index } = getAvailableAI()
-    
+    if (cooldowns[provider.id] && cooldowns[provider.id] > Date.now()) continue;
+    if (!provider.apiKey || provider.apiKey.includes('placeholder')) continue;
+
     try {
-      const model = instance.getGenerativeModel({ 
-        model: 'gemini-1.5-flash-latest',
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-      })
-      const result = await model.generateContent(prompt)
-      const response = await result.response
-      const text = response.text()
-      
-      const start = text.indexOf('{')
-      const end = text.lastIndexOf('}')
-      if (start === -1 || end === -1) throw new Error("PARSE_ERROR")
-      
-      const cleanJson = text.substring(start, end + 1)
-      return JSON.parse(cleanJson)
-
-    } catch (e) {
-      const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
-      if (isRateLimited) {
-        keyStatus[index].cooldownUntil = Date.now() + COOLDOWN_MS
-        if (retriesLeft > 0) return callRemedies(retriesLeft - 1)
+      let text = '';
+      if (provider.type === 'gemini') {
+        text = await callGemini(provider, prompt, "You are a home remedy expert. Return valid JSON only.");
+      } else {
+        text = await callGroq(provider, prompt, "You are a home remedy expert. Return valid JSON only.");
       }
-      throw e
+
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start === -1 || end === -1) throw new Error('PARSE_ERROR');
+      return JSON.parse(text.substring(start, end + 1));
+
+    } catch (err) {
+      console.error(`${provider.id} (Remedies) failed:`, err.message);
+      const isRateLimited = err.message?.includes('429') || err.message?.toLowerCase().includes('quota') || err.message?.includes('RATE_LIMIT');
+      if (isRateLimited) setCooldown(provider.id);
     }
   }
 
-  try {
-    return await callRemedies()
-  } catch (e) {
-    const isRateLimited = e.message?.includes('429') || e.message?.toLowerCase().includes('quota')
-    return { error: isRateLimited ? "Too many requests. Please wait a moment." : "AI service is currently busy. Please try later." }
-  }
+  return { error: "AI service is currently busy. Please try again in 1 minute." };
 }
