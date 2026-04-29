@@ -4,9 +4,9 @@ An AI-powered disease information website built with React + Vite + Gemini API.
 
 ## Screenshots
 
-![HealthIQ Home Page](public/image-0.png)
+![HealthIQ Home Page](public/homepage.png)
 
-![Natural Home Remedies](public/image-1.png)
+![Natural Home Remedies](public/remides.png)
 
 ## Features
 - 🔍 Search any disease by name
